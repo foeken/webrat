@@ -83,6 +83,7 @@ module Webrat
     # Example:
     #   reloads
     def reloads
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if @scope && @scope.blocked_by_popup?
       request_page(@current_url, @http_method, @data)
     end
 
@@ -106,6 +107,7 @@ module Webrat
     end
     
     def visits(url = nil, http_method = :get, data = {})
+      flunk("A popup with message: #{@current_page.visible_popup.message} is in the way!") if @scope && @scope.blocked_by_popup?
       request_page(url, http_method, data)
     end
     
@@ -119,7 +121,7 @@ module Webrat
       return response_html unless doc_root
       response_html.gsub(/"\/(stylesheets|images)/, doc_root + '/\1')
     end
-
+    
     def_delegators :current_scope, :fill_in,            :fills_in
     def_delegators :current_scope, :check,              :checks
     def_delegators :current_scope, :uncheck,            :unchecks
@@ -132,6 +134,12 @@ module Webrat
     def_delegators :current_scope, :click_post_link,    :clicks_post_link
     def_delegators :current_scope, :click_put_link,     :clicks_put_link
     def_delegators :current_scope, :click_button,       :clicks_button
+    def_delegators :current_scope, :submit_form,        :submits_form
+    def_delegators :current_scope, :dismiss_popup,      :dismisses_popup
+    
+    def_delegators :current_scope, :blocked_by_popup?
+    def_delegators :current_scope, :show_confirm_popup
+    def_delegators :current_scope, :visible_popup
     
   end
 end

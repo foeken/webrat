@@ -13,6 +13,16 @@ module Webrat
       options[:javascript] = true if options[:javascript].nil?
       
       if options[:javascript]
+        
+        unless options[:confirm_popup]
+          confirm_match = onclick.match(/confirm\(['"](.*)['"]\)/i) if onclick
+          if confirm_match
+            confirm_text  = confirm_match[1]
+            @session.show_confirm_popup(confirm_text,self,method)
+            return
+          end
+        end
+        
         @session.request_page(absolute_href, method, data)
       else
         @session.request_page(absolute_href, :get, {})

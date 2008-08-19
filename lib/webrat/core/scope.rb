@@ -5,12 +5,24 @@ module Webrat
     include Logging
     include Flunk
     
+    attr_reader :visible_popup
+    
     def initialize(session, html, selector = nil)
       @session  = session
       @html     = html
       @selector = selector
     end
     
+    # Returns true if a popup is in the way
+    def blocked_by_popup?
+      !@visible_popup.nil?
+    end
+    
+    # Show a popup of type confirm
+    def show_confirm_popup( message, link, method )
+      @visible_popup = Confirm.new(message,link,method)
+    end
+        
     # Verifies an input field or textarea exists on the current page, and stores a value for
     # it which will be sent when the form is submitted.
     #
@@ -22,6 +34,7 @@ module Webrat
     # <tt>field</tt> can be either the value of a name attribute (i.e. <tt>user[email]</tt>)
     # or the text inside a <tt><label></tt> element that points at the <tt><input></tt> field.
     def fills_in(id_or_name_or_label, options = {})
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
       find_field(id_or_name_or_label, TextField, TextareaField, PasswordField).set(options[:with])
     end
 
@@ -33,6 +46,7 @@ module Webrat
     # Example:
     #   checks 'Remember Me'
     def checks(id_or_name_or_label)
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
       find_field(id_or_name_or_label, CheckboxField).check
     end
 
@@ -44,6 +58,7 @@ module Webrat
     # Example:
     #   unchecks 'Remember Me'
     def unchecks(id_or_name_or_label)
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
       find_field(id_or_name_or_label, CheckboxField).uncheck
     end
 
@@ -55,6 +70,7 @@ module Webrat
     # Example:
     #   chooses 'First Option'
     def chooses(label)
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
       find_field(label, RadioField).choose
     end
 
@@ -70,6 +86,7 @@ module Webrat
     #   selects "February", :from => "event_month"
     #   selects "February", :from => "Event Month"
     def selects(option_text, options = {})
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
       find_select_option(option_text, options[:from]).choose
     end
 
@@ -83,6 +100,7 @@ module Webrat
     #   attaches_file "Resume", "/path/to/the/resume.txt"
     #   attaches_file "Photo", "/path/to/the/image.png", "image/png"
     def attaches_file(id_or_name_or_label, path, content_type = nil)
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
       find_field(id_or_name_or_label, FileField).set(path, content_type)
     end
 
@@ -102,6 +120,7 @@ module Webrat
     #
     #   clicks_link "Sign up", :javascript => false
     def clicks_link(link_text, options = {})
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
       find_link(link_text).click(nil, options)
     end
 
@@ -112,6 +131,7 @@ module Webrat
     # Example:
     #   clicks_get_link "Log out"
     def clicks_get_link(link_text)
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
       find_link(link_text).click(:get)
     end
 
@@ -122,6 +142,7 @@ module Webrat
     # Example:
     #   clicks_delete_link "Log out"
     def clicks_delete_link(link_text)
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
       find_link(link_text).click(:delete)
     end
 
@@ -132,6 +153,7 @@ module Webrat
     # Example:
     #   clicks_post_link "Vote"
     def clicks_post_link(link_text)
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
       find_link(link_text).click(:post)
     end
 
@@ -142,6 +164,7 @@ module Webrat
     # Example:
     #   clicks_put_link "Update profile"
     def clicks_put_link(link_text)
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
       find_link(link_text).click(:put)
     end
 
@@ -157,10 +180,38 @@ module Webrat
     # The URL and HTTP method for the form submission are automatically read from the
     # <tt>action</tt> and <tt>method</tt> attributes of the <tt><form></tt> element.
     def clicks_button(value = nil)
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
       find_button(value).click
     end
 
     alias_method :click_button, :clicks_button
+    
+    def submits_form(form_id = nil) # :nodoc:
+      
+      flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
+      
+      forms.each do |form|
+        if !form_id || form.element["id"] == form_id
+          form.submit
+          return
+        end
+      end
+      
+      flunk("Could not find form to submit")
+    end
+    
+    alias_method :submit_form, :submits_form
+    
+    def dismisses_popup( with_button=Popup::BUTTON_OK )
+      if @visible_popup
+        @visible_popup.press_button(with_button)
+        @visible_popup = nil
+      else
+        flunk("No popup to dismiss")
+      end
+    end    
+    
+    alias_method :dismiss_popup, :dismisses_popup
     
     def dom # :nodoc:
       return @dom if defined?(@dom) && @dom
