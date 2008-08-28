@@ -20,7 +20,7 @@ describe "clicks_link" do
     @session.should_receive(:get).with("/page", {})
     @session.clicks_get_link "Link text"
   end
-  
+
   it "should click delete links" do
     @session.response_body = <<-EOS
       <a href="/page">Link text</a>
@@ -28,8 +28,8 @@ describe "clicks_link" do
     @session.should_receive(:delete).with("/page", {})
     @session.clicks_delete_link "Link text"
   end
-  
-  
+
+
   it "should click post links" do
     @session.response_body = <<-EOS
       <a href="/page">Link text</a>
@@ -37,7 +37,7 @@ describe "clicks_link" do
     @session.should_receive(:post).with("/page", {})
     @session.clicks_post_link "Link text"
   end
-  
+
   it "should click put links" do
     @session.response_body = <<-EOS
       <a href="/page">Link text</a>
@@ -45,7 +45,34 @@ describe "clicks_link" do
     @session.should_receive(:put).with("/page", {})
     @session.clicks_put_link "Link text"
   end
-  
+
+  it "should click links with confirmation" do
+    @session.response_body = <<-EOS
+      <a href="/page" onclick="confirm('boo');">Link with confirmation</a>
+    EOS
+    @session.should_receive(:get).with("/page", {})
+    @session.clicks_link "Link with confirmation"
+    @session.blocked_by_popup?.should be_true
+
+    @session.dismisses_popup
+    @session.blocked_by_popup?.should be_false
+
+    @session.clicks_link "Link with confirmation"
+    @session.blocked_by_popup?.should be_true
+
+    lambda {
+      @session.dismisses_popup("non existant")
+    }.should raise_error
+
+    @session.blocked_by_popup?.should be_true
+    @session.dismisses_popup(Webrat::Popup::BUTTON_CANCEL)
+    @session.blocked_by_popup?.should be_false
+
+    lambda {
+      @session.dismisses_popup(Webrat::Popup::BUTTON_CANCEL)
+    }.should raise_error
+  end
+
   it "should click rails javascript links with authenticity tokens" do
     @session.response_body = <<-EOS
       <a href="/posts" onclick="var f = document.createElement('form');
@@ -64,7 +91,7 @@ describe "clicks_link" do
     @session.should_receive(:post).with("/posts", "authenticity_token" => "aa79cb354597a60a3786e7e291ed4f74d77d3a62")
     @session.clicks_link "Posts"
   end
-  
+
   it "should click rails javascript delete links" do
     @session.response_body = <<-EOS
       <a href="/posts/1" onclick="var f = document.createElement('form');
@@ -83,7 +110,7 @@ describe "clicks_link" do
     @session.should_receive(:delete).with("/posts/1", {})
     @session.clicks_link "Delete"
   end
-  
+
   it "should click rails javascript post links" do
     @session.response_body = <<-EOS
       <a href="/posts" onclick="var f = document.createElement('form');
@@ -97,7 +124,7 @@ describe "clicks_link" do
     @session.should_receive(:post).with("/posts", {})
     @session.clicks_link "Posts"
   end
-  
+
   it "should click rails javascript post links without javascript" do
     @session.response_body = <<-EOS
       <a href="/posts" onclick="var f = document.createElement('form');
@@ -111,7 +138,7 @@ describe "clicks_link" do
     @session.should_receive(:get).with("/posts", {})
     @session.clicks_link "Posts", :javascript => false
   end
-  
+
   it "should click rails javascript put links" do
     @session.response_body = <<-EOS
       <a href="/posts" onclick="var f = document.createElement('form');
@@ -130,7 +157,7 @@ describe "clicks_link" do
     @session.should_receive(:put).with("/posts", {})
     @session.clicks_link "Put"
   end
-  
+
   it "should fail if the javascript link doesn't have a value for the _method input" do
     @session.response_body = <<-EOS
       <a href="/posts/1" onclick="var f = document.createElement('form');
@@ -145,12 +172,12 @@ describe "clicks_link" do
         f.submit();
         return false;">Link</a>
     EOS
-    
+
     lambda {
       @session.clicks_link "Link"
     }.should raise_error
   end
-  
+
   it "should assert valid response" do
     @session.response_body = <<-EOS
       <a href="/page">Link text</a>
@@ -158,17 +185,17 @@ describe "clicks_link" do
     @session.response_code = 404
     lambda { @session.clicks_link "Link text" }.should raise_error
   end
-  
+
   it "should fail is the link doesn't exist" do
     @session.response_body = <<-EOS
       <a href="/page">Link text</a>
     EOS
-    
+
     lambda {
       @session.clicks_link "Missing link"
     }.should raise_error
   end
-  
+
   it "should not be case sensitive" do
     @session.response_body = <<-EOS
       <a href="/page">Link text</a>
@@ -176,7 +203,7 @@ describe "clicks_link" do
     @session.should_receive(:get).with("/page", {})
     @session.clicks_link "LINK TEXT"
   end
-  
+
   it "should match link substrings" do
     @session.response_body = <<-EOS
       <a href="/page">This is some cool link text, isn't it?</a>
@@ -184,7 +211,7 @@ describe "clicks_link" do
     @session.should_receive(:get).with("/page", {})
     @session.clicks_link "Link text"
   end
-  
+
   it "should work with elements in the link" do
     @session.response_body = <<-EOS
       <a href="/page"><span>Link text</span></a>
@@ -192,7 +219,7 @@ describe "clicks_link" do
     @session.should_receive(:get).with("/page", {})
     @session.clicks_link "Link text"
   end
-  
+
   it "should match the first matching link" do
     @session.response_body = <<-EOS
       <a href="/page1">Link text</a>
@@ -201,26 +228,26 @@ describe "clicks_link" do
     @session.should_receive(:get).with("/page1", {})
     @session.clicks_link "Link text"
   end
-  
+
   it "should choose the shortest link text match" do
     @session.response_body = <<-EOS
     <a href="/page1">Linkerama</a>
     <a href="/page2">Link</a>
     EOS
-    
+
     @session.should_receive(:get).with("/page2", {})
     @session.clicks_link "Link"
   end
-  
+
   it "should treat non-breaking spaces as spaces" do
     @session.response_body = <<-EOS
     <a href="/page1">This&nbsp;is&nbsp;a&nbsp;link</a>
     EOS
-    
+
     @session.should_receive(:get).with("/page1", {})
     @session.clicks_link "This is a link"
   end
-  
+
   it "should click link within a selector" do
     @session.response_body = <<-EOS
     <a href="/page1">Link</a>
@@ -228,7 +255,7 @@ describe "clicks_link" do
       <a href="/page2">Link</a>
     </div>
     EOS
-    
+
     @session.should_receive(:get).with("/page2", {})
     @session.clicks_link_within "#container", "Link"
   end
@@ -250,7 +277,7 @@ describe "clicks_link" do
     @session.should_receive(:get).with("/page/sub", {})
     @session.clicks_link "Jump to sub page"
   end
-  
+
   it "should follow fully qualified local links" do
     @session.response_body = <<-EOS
       <a href="http://www.example.com/page/sub">Jump to sub page</a>
