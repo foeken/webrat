@@ -41,7 +41,7 @@ describe "submissal of forms" do
     }.should raise_error
   end
 
-  it "should block on forms with confirmation" do
+  it "should block on forms with confirmation cancelled" do
     @session.response_body = <<-EOS
       <form method="post" action="/login" onsubmit="confirm('Are you sure?')">
         <label for="user_text">User Text</label>
@@ -52,8 +52,30 @@ describe "submissal of forms" do
     @session.submits_form
     @session.blocked_by_popup?.should be_true
 
+    lambda {
+      @session.dismisses_popup("Weird button")
+    }.should raise_error
+
+    @session.should_not_receive(:request_page).with("/login", "post", "user" => {"text" => "filling text area"})
+    @session.dismisses_popup(Webrat::Popup::BUTTON_CANCEL)
+  end
+  
+  it "should block on forms with confirmation confirmed" do
+    @session.response_body = <<-EOS
+      <form method="post" action="/login" onsubmit="confirm('Are you sure?')">
+        <label for="user_text">User Text</label>
+        <textarea id="user_text" name="user[text]">filling text area</textarea>
+        <input type="submit" />
+      </form>
+    EOS
+    @session.submits_form
+    @session.blocked_by_popup?.should be_true
+
+    lambda {
+      @session.dismisses_popup("Weird button")
+    }.should raise_error
+
     @session.should_receive(:request_page).with("/login", "post", "user" => {"text" => "filling text area"})
     @session.dismisses_popup(Webrat::Popup::BUTTON_OK)
-
   end
 end

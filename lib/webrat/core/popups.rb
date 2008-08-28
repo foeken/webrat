@@ -1,14 +1,8 @@
 module Webrat
 
   class Popup
-
     BUTTON_OK     = "OK"
     BUTTON_CANCEL = "CANCEL"
-
-    def press_button button=BUTTON_OK
-      return
-    end
-
   end
 
   class Confirm < Popup
