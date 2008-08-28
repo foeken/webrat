@@ -139,7 +139,9 @@ module Webrat
     
     def_delegators :current_scope, :blocked_by_popup?
     def_delegators :current_scope, :show_confirm_popup
+    def_delegators :current_scope, :show_form_confirm_popup
     def_delegators :current_scope, :visible_popup
+    def_delegators :current_scope, :pending_form
     
   end
 end

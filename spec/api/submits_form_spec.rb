@@ -39,6 +39,21 @@ describe "submissal of forms" do
     lambda {
       @session.submits_form("form3")
     }.should raise_error
+  end
+
+  it "should block on forms with confirmation" do
+    @session.response_body = <<-EOS
+      <form method="post" action="/login" onsubmit="confirm('Are you sure?')">
+        <label for="user_text">User Text</label>
+        <textarea id="user_text" name="user[text]">filling text area</textarea>
+        <input type="submit" />
+      </form>
+    EOS
+    @session.submits_form
+    @session.blocked_by_popup?.should be_true
+
+    @session.should_receive(:request_page).with("/login", "post", "user" => {"text" => "filling text area"})
+    @session.dismisses_popup(Webrat::Popup::BUTTON_OK)
 
   end
 end

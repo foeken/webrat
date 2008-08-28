@@ -4,25 +4,32 @@ module Webrat
   class Scope
     include Logging
     include Flunk
-    
+
     attr_reader :visible_popup
-    
+    attr_reader :pending_form
+
     def initialize(session, html, selector = nil)
       @session  = session
       @html     = html
       @selector = selector
     end
-    
+
     # Returns true if a popup is in the way
     def blocked_by_popup?
-      !@visible_popup.nil?
+      !!(@visible_popup || @pending_form)
     end
-    
+
     # Show a popup of type confirm
     def show_confirm_popup( message, link, method )
-      @visible_popup = Confirm.new(message,link,method)
+      @visible_popup = Confirm.new(message, link, method)
     end
-        
+
+    # Show a popup of type confirm
+    def show_form_confirm_popup( message, form )
+      @pending_form = FormConfirm.new(message, form)
+    end
+
+
     # Verifies an input field or textarea exists on the current page, and stores a value for
     # it which will be sent when the form is submitted.
     #
@@ -39,7 +46,7 @@ module Webrat
     end
 
     alias_method :fill_in, :fills_in
-    
+
     # Verifies that an input checkbox exists on the current page and marks it
     # as checked, so that the value will be submitted with the form.
     #
@@ -51,7 +58,7 @@ module Webrat
     end
 
     alias_method :check, :checks
-    
+
     # Verifies that an input checkbox exists on the current page and marks it
     # as unchecked, so that the value will not be submitted with the form.
     #
@@ -63,7 +70,7 @@ module Webrat
     end
 
     alias_method :uncheck, :unchecks
-    
+
     # Verifies that an input radio button exists on the current page and marks it
     # as checked, so that the value will be submitted with the form.
     #
@@ -75,7 +82,7 @@ module Webrat
     end
 
     alias_method :choose, :chooses
-    
+
     # Verifies that a an option element exists on the current page with the specified
     # text. You can optionally restrict the search to a specific select list by
     # assigning <tt>options[:from]</tt> the value of the select list's name or
@@ -91,7 +98,7 @@ module Webrat
     end
 
     alias_method :select, :selects
-    
+
     # Verifies that an input file field exists on the current page and sets
     # its value to the given +file+, so that the file will be uploaded
     # along with the form. An optional <tt>content_type</tt> may be given.
@@ -105,11 +112,11 @@ module Webrat
     end
 
     alias_method :attach_file, :attaches_file
-    
+
     # Issues a request for the URL pointed to by a link on the current page,
     # follows any redirects, and verifies the final page load was successful.
     #
-    # clicks_link has very basic support for detecting Rails-generated 
+    # clicks_link has very basic support for detecting Rails-generated
     # JavaScript onclick handlers for PUT, POST and DELETE links, as well as
     # CSRF authenticity tokens if they are present.
     #
@@ -125,9 +132,9 @@ module Webrat
     end
 
     alias_method :click_link, :clicks_link
-    
+
     # Works like clicks_link, but forces a GET request
-    # 
+    #
     # Example:
     #   clicks_get_link "Log out"
     def clicks_get_link(link_text)
@@ -136,9 +143,9 @@ module Webrat
     end
 
     alias_method :click_get_link, :clicks_get_link
-    
+
     # Works like clicks_link, but issues a DELETE request instead of a GET
-    # 
+    #
     # Example:
     #   clicks_delete_link "Log out"
     def clicks_delete_link(link_text)
@@ -147,9 +154,9 @@ module Webrat
     end
 
     alias_method :click_delete_link, :clicks_delete_link
-    
+
     # Works like clicks_link, but issues a POST request instead of a GET
-    # 
+    #
     # Example:
     #   clicks_post_link "Vote"
     def clicks_post_link(link_text)
@@ -158,9 +165,9 @@ module Webrat
     end
 
     alias_method :click_post_link, :clicks_post_link
-    
+
     # Works like clicks_link, but issues a PUT request instead of a GET
-    # 
+    #
     # Example:
     #   clicks_put_link "Update profile"
     def clicks_put_link(link_text)
@@ -169,7 +176,7 @@ module Webrat
     end
 
     alias_method :click_put_link, :clicks_put_link
-    
+
     # Verifies that a submit button exists for the form, then submits the form, follows
     # any redirects, and verifies the final page was successful.
     #
@@ -185,48 +192,58 @@ module Webrat
     end
 
     alias_method :click_button, :clicks_button
-    
+
     def submits_form(form_id = nil) # :nodoc:
-      
+
       flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
-      
+
       forms.each do |form|
+        confirm_match = form.onsubmit.match(/confirm\(['"](.*)['"]\)/i) if form.onsubmit
+        if confirm_match
+          confirm_text  = confirm_match[1]
+          @session.show_form_confirm_popup(confirm_text, form)
+          return
+        end
+
         if !form_id || form.element["id"] == form_id
           form.submit
           return
         end
       end
-      
+
       flunk("Could not find form to submit")
     end
-    
+
     alias_method :submit_form, :submits_form
-    
+
     def dismisses_popup( with_button=Popup::BUTTON_OK )
       if @visible_popup
         @visible_popup.press_button(with_button)
         @visible_popup = nil
+      elsif @pending_form
+        @pending_form.press_button(with_button)
+        @pending_form = nil
       else
         flunk("No popup to dismiss")
       end
-    end    
-    
+    end
+
     alias_method :dismiss_popup, :dismisses_popup
-    
+
     def dom # :nodoc:
       return @dom if defined?(@dom) && @dom
       @dom = Hpricot(@html)
-      
+
       if @selector
         html = (@dom / @selector).first.to_html
         @dom = Hpricot(html)
       end
-      
+
       return @dom
     end
-    
+
   protected
-  
+
     def find_select_option(option_text, id_or_name_or_label)
       if id_or_name_or_label
         field = find_field(id_or_name_or_label, SelectField)
@@ -237,55 +254,55 @@ module Webrat
           return result if result
         end
       end
-        
+
       flunk("Could not find option #{option_text.inspect}")
     end
-    
+
     def find_button(value)
       forms.each do |form|
         button = form.find_button(value)
         return button if button
       end
-      
+
       flunk("Could not find button #{value.inspect}")
     end
-    
+
     def find_link(text, selector = nil)
       matching_links = []
-      
+
       links_within(selector).each do |possible_link|
         matching_links << possible_link if possible_link.matches_text?(text)
       end
-      
+
       if matching_links.any?
         matching_links.sort_by { |l| l.text.length }.first
       else
         flunk("Could not find link with text #{text.inspect}")
       end
     end
-    
+
     def find_field(id_or_name_or_label, *field_types)
       forms.each do |form|
         result = form.find_field(id_or_name_or_label, *field_types)
         return result if result
       end
-      
+
       flunk("Could not find #{field_types.inspect}: #{id_or_name_or_label.inspect}")
     end
-    
+
     def links_within(selector)
       (dom / selector / "a[@href]").map do |link_element|
         Link.new(@session, link_element)
       end
     end
-    
+
     def forms
       return @forms if @forms
-      
+
       @forms = (dom / "form").map do |form_element|
         Form.new(@session, form_element)
       end
     end
-    
+
   end
 end
