@@ -254,7 +254,7 @@ module Webrat
       matching_links = []
       
       links_within(selector).each do |possible_link|
-        matching_links << possible_link if possible_link.matches_text?(text)
+        matching_links << possible_link if possible_link.matches_text?(text) || possible_link.matches_href?(text)
       end
       
       if matching_links.any?

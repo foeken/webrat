@@ -35,6 +35,10 @@ module Webrat
       html =~ matcher || title =~ matcher
     end
     
+    def matches_href?(href_text)
+      href.downcase == href_text.downcase
+    end
+    
     def text
       @element.innerHTML
     end
