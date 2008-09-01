@@ -139,7 +139,7 @@ module Webrat
     #   clicks_get_link "Log out"
     def clicks_get_link(link_text)
       flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
-      find_link(link_text).click(:get)
+      find_link(link_text, :get).click(:get)
     end
 
     alias_method :click_get_link, :clicks_get_link
@@ -150,7 +150,7 @@ module Webrat
     #   clicks_delete_link "Log out"
     def clicks_delete_link(link_text)
       flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
-      find_link(link_text).click(:delete)
+      find_link(link_text, :delete).click(:delete)
     end
 
     alias_method :click_delete_link, :clicks_delete_link
@@ -161,7 +161,7 @@ module Webrat
     #   clicks_post_link "Vote"
     def clicks_post_link(link_text)
       flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
-      find_link(link_text).click(:post)
+      find_link(link_text, :post).click(:post)
     end
 
     alias_method :click_post_link, :clicks_post_link
@@ -172,7 +172,7 @@ module Webrat
     #   clicks_put_link "Update profile"
     def clicks_put_link(link_text)
       flunk("Popup with message: '#{@visible_popup.message}' is in the way!") if blocked_by_popup?
-      find_link(link_text).click(:put)
+      find_link(link_text, :put).click(:put)
     end
 
     alias_method :click_put_link, :clicks_put_link
@@ -266,12 +266,14 @@ module Webrat
 
       flunk("Could not find button #{value.inspect}")
     end
-
-    def find_link(text, selector = nil)
+    
+    def find_link(text, method = :get, selector = nil)
       matching_links = []
 
       links_within(selector).each do |possible_link|
-        matching_links << possible_link if possible_link.matches_text?(text)
+        if possible_link.matches_text?(text) || ( possible_link.matches_href?(text) && possible_link.matches_method?(method) )
+          matching_links << possible_link
+        end
       end
 
       if matching_links.any?

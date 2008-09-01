@@ -35,6 +35,14 @@ module Webrat
       html =~ matcher || title =~ matcher
     end
     
+    def matches_href?(href_text)
+      href.downcase == href_text.downcase
+    end
+    
+    def matches_method?(method=:get)
+      http_method == method
+    end
+    
     def text
       @element.innerHTML
     end
@@ -76,7 +84,7 @@ module Webrat
     end
     
     def http_method
-      if !onclick.blank? && onclick.include?("f.submit()")
+      if !onclick.blank? && ( onclick.include?("f.submit()") || onclick.include?("Ajax.Request") )
         http_method_from_js_form
       else
         :get
@@ -86,8 +94,22 @@ module Webrat
     def http_method_from_js_form
       if onclick.include?("m.setAttribute('name', '_method')")
         http_method_from_fake_method_param
+      elsif onclick.include?("Ajax.Request")
+        http_method_from_ajax_request_hash
       else
         :post
+      end
+    end
+
+    def http_method_from_ajax_request_hash
+      if onclick.include?("method:'delete'")
+        :delete
+      elsif onclick.include?("method:'post'")
+        :post
+      elsif onclick.include?("method:'put'")
+        :put
+      else
+        raise "No HTTP method for method param in #{onclick.inspect}"
       end
     end
 
