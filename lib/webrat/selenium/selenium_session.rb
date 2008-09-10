@@ -2,16 +2,22 @@ module Webrat
   class SeleniumSession < Session
     
     def initialize(selenium_driver)
-      super
+      super()
       @selenium = selenium_driver
       define_location_strategies
     end
     
+    def selenium
+      @selenium
+    end
+    
     def visits(url)
+      flunk("Popup with message: '#{browser.popup_message}' is in the way!") if blocked_by_popup?
       @selenium.open(url)
     end
     
     def fills_in(field_identifier, options)
+      flunk("Popup with message: '#{browser.popup_message}' is in the way!") if blocked_by_popup?
       locator = "webrat=#{Regexp.escape(field_identifier)}"
       @selenium.type(locator, "#{options[:with]}")
     end
@@ -21,18 +27,21 @@ module Webrat
     end
     
     def clicks_button(button_text = nil, options = {})
+      flunk("Popup with message: '#{browser.popup_message}' is in the way!") if blocked_by_popup?
       button_text, options = nil, button_text if button_text.is_a?(Hash) && options == {}
-      button_text ||= '*'
+      button_text ||= '*'      
       @selenium.click("button=#{button_text}")
       wait_for_result(options[:wait])
     end
 
     def clicks_link(link_text, options = {})
+      flunk("Popup with message: '#{browser.popup_message}' is in the way!") if blocked_by_popup?
       @selenium.click("webratlink=#{link_text}")
       wait_for_result(options[:wait])
     end
     
     def clicks_link_within(selector, link_text, options = {})
+      flunk("Popup with message: '#{browser.popup_message}' is in the way!") if blocked_by_popup?
       @selenium.click("webratlinkwithin=#{selector}|#{link_text}")
       wait_for_result(options[:wait])
     end
@@ -65,6 +74,7 @@ module Webrat
     end    
     
     def selects(option_text, options = {})
+      flunk("Popup with message: '#{browser.popup_message}' is in the way!") if blocked_by_popup?
       id_or_name_or_label = options[:from]
       
       if id_or_name_or_label
@@ -76,11 +86,13 @@ module Webrat
     end
     
     def chooses(label_text)
+      flunk("Popup with message: '#{browser.popup_message}' is in the way!") if blocked_by_popup?
       @selenium.click("webrat=#{label_text}")
     end
         
     def checks(label_text)
-      @selenium.check("webrat=#{label_text}")
+      flunk("Popup with message: '#{browser.popup_message}' is in the way!") if blocked_by_popup?
+      @selenium.click("webrat=#{label_text}")
     end
         
     protected
